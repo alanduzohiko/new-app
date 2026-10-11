@@ -111,6 +111,15 @@ jobs:
           print("Java and Kotlin compiler targets aligned to JVM 17.")
           PY
 
+      - name: Remove stale bundled dexopt profiles
+        shell: bash
+        env:
+          PROJECT_DIR: ${{ steps.source.outputs.project_dir }}
+        run: |
+          set -euo pipefail
+          rm -f "$PROJECT_DIR/app/src/main/assets/dexopt/baseline.prof" "$PROJECT_DIR/app/src/main/assets/dexopt/baseline.profm"
+          rmdir "$PROJECT_DIR/app/src/main/assets/dexopt" 2>/dev/null || true
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
