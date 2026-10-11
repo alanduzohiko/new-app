@@ -1,6 +1,8 @@
 name: مەشخەڵ Android Build
 
 on:
+  push:
+    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
@@ -78,6 +80,36 @@ jobs:
           if [[ "$GITHUB_WORKSPACE/tools/validate_project.py" != "$PROJECT_DIR/tools/validate_project.py" ]]; then
             cp "$GITHUB_WORKSPACE/tools/validate_project.py" "$PROJECT_DIR/tools/validate_project.py"
           fi
+
+      - name: Align Java and Kotlin JVM targets
+        shell: bash
+        env:
+          PROJECT_DIR: ${{ steps.source.outputs.project_dir }}
+        run: |
+          set -euo pipefail
+          python3 - "$PROJECT_DIR/app/build.gradle.kts" <<'PY'
+          from pathlib import Path
+          import sys
+          path = Path(sys.argv[1])
+          text = path.read_text(encoding="utf-8")
+          if "sourceCompatibility = JavaVersion.VERSION_17" not in text:
+              marker = "android {"
+              if marker not in text:
+                  raise SystemExit("Could not find the android { block in app/build.gradle.kts")
+              insert = """
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          """
+              pos = text.index(marker) + len(marker)
+              text = text[:pos] + insert + text[pos:]
+              path.write_text(text, encoding="utf-8")
+          print("Java and Kotlin compiler targets aligned to JVM 17.")
+          PY
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
